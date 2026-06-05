@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Converso",
+    "slug": "converso-app",
+    "version": "1.0.0",
+    "scheme": "converso",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#0C0E18",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.converso.mobile"
+    },
+    "android": {
+      "package": "app.converso.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
