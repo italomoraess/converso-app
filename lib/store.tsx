@@ -1,0 +1,173 @@
+/* CONVERSO Mobile — data store (context) backed by the crm-api service layer.
+   Loads real data after login; exposes collections + mutators to the screens. */
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  clientes as mockClientes,
+  servicos as mockServicos,
+  negocios as mockNegocios,
+  agenda as mockAgenda,
+  kpis as mockKpis,
+  sparkReceita as mockSpark,
+  receitaMeses as mockMeses,
+  user as mockUser,
+  type Cliente,
+  type Servico,
+  type Negocio,
+  type Evento,
+  type Usuario,
+  type EtapaId,
+} from './data';
+import { getToken } from './api';
+import {
+  authService,
+  leadsService,
+  catalogService,
+  agendaService,
+  reportsService,
+  type DashboardKpis,
+} from './services';
+import { leadToCliente, leadToNegocio } from './mappers';
+
+export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
+
+const EMPTY_KPIS: DashboardKpis = {
+  receitaMes: 0, receitaMeta: 5000, receitaDelta: 0, aReceber: 0,
+  servicosAtivos: 0, negociosAbertos: 0, taxaConversao: 0, novosClientes: 0, agendaHoje: 0,
+};
+
+interface DataCtx {
+  loading: boolean;
+  hasAccess: boolean;
+  clientes: Cliente[];
+  servicos: Servico[];
+  negocios: Negocio[];
+  agenda: Evento[];
+  kpis: DashboardKpis;
+  sparkReceita: number[];
+  receitaMeses: { m: string; v: number }[];
+  user: Usuario;
+  clienteById: (id: string) => Cliente | { nome: string; ini: string; cor: string };
+  reload: () => Promise<void>;
+  saveService: (f: Servico) => Promise<void>;
+  deleteService: (id: string) => Promise<void>;
+  moveDeal: (id: string, etapa: EtapaId) => void;
+  addEvent: (ev: Omit<Evento, 'id'>) => Promise<void>;
+}
+
+const Ctx = createContext<DataCtx | null>(null);
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const [loading, setLoading] = useState(false);
+  const [hasAccess, setHasAccess] = useState(true);
+  const [clientes, setClientes] = useState<Cliente[]>(USE_MOCK ? mockClientes : []);
+  const [servicos, setServicos] = useState<Servico[]>(USE_MOCK ? mockServicos : []);
+  const [negocios, setNegocios] = useState<Negocio[]>(USE_MOCK ? mockNegocios : []);
+  const [agenda, setAgenda] = useState<Evento[]>(USE_MOCK ? mockAgenda : []);
+  const [kpis, setKpis] = useState<DashboardKpis>(USE_MOCK ? (mockKpis as DashboardKpis) : EMPTY_KPIS);
+  const [sparkReceita, setSpark] = useState<number[]>(USE_MOCK ? mockSpark : []);
+  const [receitaMeses, setMeses] = useState<{ m: string; v: number }[]>(USE_MOCK ? mockMeses : []);
+  const [user, setUser] = useState<Usuario>(mockUser);
+
+  const reload = useCallback(async () => {
+    if (USE_MOCK) return;
+    if (!(await getToken())) return;
+    setLoading(true);
+    try {
+      const [profile, leads, svc, ag, dash] = await Promise.all([
+        authService.me().catch(() => null),
+        leadsService.list().catch(() => []),
+        catalogService.list().catch(() => []),
+        agendaService.list().catch(() => []),
+        reportsService.dashboard().catch(() => null),
+      ]);
+      if (profile) {
+        setHasAccess(profile.hasAccess !== false);
+        setUser({
+          nome: profile.name ?? profile.email,
+          papel: 'Autônomo',
+          email: profile.email,
+          ini: (profile.name ?? profile.email).split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?',
+          cidade: '',
+          plano: profile.plan ?? 'Profissional',
+        });
+      }
+      setClientes(leads.map(leadToCliente));
+      setNegocios(leads.map(leadToNegocio));
+      setServicos(svc);
+      setAgenda(ag);
+      if (dash) {
+        setKpis(dash.kpis);
+        setSpark(dash.sparkReceita);
+        setMeses(dash.receitaMeses);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const clienteById = useCallback(
+    (id: string) => clientes.find((c) => c.id === id) || { nome: '—', ini: '?', cor: '#999' },
+    [clientes],
+  );
+
+  const saveService = useCallback(
+    async (f: Servico) => {
+      const isEdit = !!f.id && servicos.some((s) => s.id === f.id);
+      if (USE_MOCK) {
+        setServicos((l) => (isEdit ? l.map((s) => (s.id === f.id ? f : s)) : [{ ...f, id: 's' + Date.now() }, ...l]));
+        return;
+      }
+      const saved = isEdit ? await catalogService.update(f.id, f) : await catalogService.create(f);
+      setServicos((l) => (isEdit ? l.map((s) => (s.id === saved.id ? saved : s)) : [saved, ...l]));
+    },
+    [servicos],
+  );
+
+  const deleteService = useCallback(async (id: string) => {
+    if (!USE_MOCK) await catalogService.remove(id);
+    setServicos((l) => l.filter((s) => s.id !== id));
+  }, []);
+
+  const moveDeal = useCallback((id: string, etapa: EtapaId) => {
+    setNegocios((l) => l.map((d) => (d.id === id ? { ...d, etapa, dias: 0 } : d)));
+    if (!USE_MOCK) leadsService.moveStage(id, etapa).catch(() => {});
+  }, []);
+
+  const addEvent = useCallback(async (ev: Omit<Evento, 'id'>) => {
+    if (USE_MOCK) {
+      setAgenda((l) => [...l, { ...ev, id: 'a' + Date.now() }]);
+      return;
+    }
+    const now = new Date();
+    const saved = await agendaService.create(ev, now.getFullYear(), now.getMonth());
+    setAgenda((l) => [...l, saved]);
+  }, []);
+
+  const value = useMemo<DataCtx>(
+    () => ({
+      loading, hasAccess, clientes, servicos, negocios, agenda, kpis, sparkReceita, receitaMeses, user,
+      clienteById, reload, saveService, deleteService, moveDeal, addEvent,
+    }),
+    [loading, hasAccess, clientes, servicos, negocios, agenda, kpis, sparkReceita, receitaMeses, user, clienteById, reload, saveService, deleteService, moveDeal, addEvent],
+  );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useData(): DataCtx {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error('useData must be used within DataProvider');
+  return ctx;
+}

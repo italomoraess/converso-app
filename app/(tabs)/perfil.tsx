@@ -6,15 +6,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon, IconName } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVCard, CVButton } from '@/components/ui';
+import { InactiveNotice } from '@/components/InactiveNotice';
 import { colors, radii, alpha, mix } from '@/theme/tokens';
 import { clearToken } from '@/lib/api';
-import { user, servicos, clientes, negocios } from '@/lib/data';
+import { useData } from '@/lib/store';
 
 type Item = { icon: IconName; label: string; meta?: string };
 type Grupo = { titulo: string; itens: Item[] };
 
 export default function Perfil() {
   const insets = useSafeAreaInsets();
+  const { user, servicos, clientes, negocios } = useData();
   const [confirm, setConfirm] = useState(false);
   const u = user;
 
@@ -62,6 +64,8 @@ export default function Perfil() {
       showsVerticalScrollIndicator={false}
     >
       <MobileTop title="Perfil" sub="Sua conta" back onBack={() => router.back()} />
+
+      <InactiveNotice />
 
       <View style={{ paddingHorizontal: 20, gap: 18 }}>
         {/* profile card */}

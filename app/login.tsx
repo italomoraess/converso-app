@@ -6,14 +6,39 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { CVButton, Field, LogoMark } from '@/components/ui';
 import { colors } from '@/theme/tokens';
+import { authService } from '@/lib/services';
+import { useData, USE_MOCK } from '@/lib/store';
 
 export default function Login() {
   const insets = useSafeAreaInsets();
-  const [email, setEmail] = useState('julia.mendes@converso.app');
-  const [senha, setSenha] = useState('••••••••');
+  const { reload } = useData();
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
   const [show, setShow] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  const onAuth = () => router.replace('/(tabs)/dashboard');
+  const onAuth = async () => {
+    setErr(null);
+    if (USE_MOCK) {
+      router.replace('/(tabs)/dashboard');
+      return;
+    }
+    if (!email || !senha) {
+      setErr('Informe e-mail e senha.');
+      return;
+    }
+    setBusy(true);
+    try {
+      await authService.login(email.trim(), senha);
+      await reload();
+      router.replace('/(tabs)/dashboard');
+    } catch {
+      setErr('E-mail ou senha inválidos.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -53,8 +78,9 @@ export default function Login() {
       </View>
 
       <View style={{ marginTop: 'auto', paddingTop: 28, gap: 16 }}>
+        {err && <Text style={{ color: colors.danger, fontSize: 13.5, fontWeight: '600' }}>{err}</Text>}
         <CVButton size="lg" full icon="arrowR" onPress={onAuth}>
-          Entrar
+          {busy ? 'Entrando…' : 'Entrar'}
         </CVButton>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
           <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />

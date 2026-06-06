@@ -8,10 +8,12 @@ import { Icon } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVCard, Badge, Field, EmptyState } from '@/components/ui';
 import { colors, alpha } from '@/theme/tokens';
-import { servicos as seed, catColor, catIcon, clienteById, fmtBRL, STATUS_META } from '@/lib/data';
+import { catColor, catIcon, fmtBRL, STATUS_META } from '@/lib/data';
+import { useData } from '@/lib/store';
 
 export default function Servicos() {
   const insets = useSafeAreaInsets();
+  const { servicos: seed, clienteById } = useData();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('Todos');
   const list = seed.filter(

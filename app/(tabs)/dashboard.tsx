@@ -7,20 +7,13 @@ import { Icon, IconName } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { Sparkline } from '@/components/Sparkline';
 import { CVCard, Badge, SectionHead, StatPill } from '@/components/ui';
+import { InactiveNotice } from '@/components/InactiveNotice';
 import { colors, radii, alpha, mix } from '@/theme/tokens';
-import {
-  kpis,
-  agenda,
-  etapas,
-  negocios,
-  user,
-  sparkReceita,
-  catColor,
-  clienteById,
-  fmtBRL,
-} from '@/lib/data';
+import { etapas, catColor, fmtBRL, meses } from '@/lib/data';
+import { useData } from '@/lib/store';
 
 function MiniFunnel() {
+  const { negocios } = useData();
   const counts = etapas.map((e) => ({
     ...e,
     n: negocios.filter((d) => d.etapa === e.id).length,
@@ -92,9 +85,12 @@ function ShortcutBtn({
 
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
-  const k = kpis;
-  const pct = Math.round((k.receitaMes / k.receitaMeta) * 100);
-  const hoje = agenda.filter((a) => a.dia === 4);
+  const { kpis: k, agenda, user, sparkReceita, clienteById } = useData();
+  const pct = k.receitaMeta ? Math.round((k.receitaMes / k.receitaMeta) * 100) : 0;
+  const now = new Date();
+  const hoje = agenda.filter((a) => a.dia === now.getDate());
+  const mesAtual = meses[now.getMonth()];
+  const subHoje = now.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <ScrollView
@@ -103,7 +99,7 @@ export default function Dashboard() {
       showsVerticalScrollIndicator={false}
     >
       <MobileTop
-        sub="Quarta, 4 de junho"
+        sub={subHoje}
         title={`Olá, ${user.nome.split(' ')[0]}`}
         avatar={user.ini}
         onAvatar={() => router.push('/(tabs)/perfil')}
@@ -139,6 +135,8 @@ export default function Dashboard() {
         }
       />
 
+      <InactiveNotice />
+
       <View style={{ paddingHorizontal: 20, gap: 16 }}>
         {/* Hero receita */}
         <View
@@ -151,7 +149,7 @@ export default function Dashboard() {
         >
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View>
-              <Text style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.8)', fontWeight: '600' }}>Receita em junho</Text>
+              <Text style={{ fontSize: 13.5, color: 'rgba(255,255,255,0.8)', fontWeight: '600' }}>Receita em {mesAtual.toLowerCase()}</Text>
               <Text style={{ fontSize: 36, fontWeight: '800', letterSpacing: -1, marginTop: 4, color: '#fff' }}>
                 {fmtBRL(k.receitaMes)}
               </Text>
@@ -169,7 +167,7 @@ export default function Dashboard() {
                 }}
               >
                 <Icon name="trendUp" size={14} stroke={2.6} color="#fff" />
-                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#fff' }}>+{k.receitaDelta}% vs maio</Text>
+                <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#fff' }}>{k.receitaDelta >= 0 ? '+' : ''}{k.receitaDelta}% no mês</Text>
               </View>
             </View>
             <View style={{ opacity: 0.9 }}>

@@ -7,10 +7,12 @@ import { Icon } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVCard, Badge, Avatar } from '@/components/ui';
 import { colors, radii, alpha } from '@/theme/tokens';
-import { etapas, negocios as seed, kpis, clienteById, fmtBRL } from '@/lib/data';
+import { etapas, fmtBRL } from '@/lib/data';
 import type { EtapaId, Negocio } from '@/lib/data';
+import { useData } from '@/lib/store';
 
 function DealCard({ deal, stageColor, onMove }: { deal: Negocio; stageColor: string; onMove: () => void }) {
+  const { clienteById } = useData();
   const cl = clienteById(deal.cliente);
   return (
     <CVCard pad={14} style={{ borderLeftWidth: 3, borderLeftColor: stageColor }}>
@@ -40,14 +42,14 @@ function DealCard({ deal, stageColor, onMove }: { deal: Negocio; stageColor: str
 
 export default function Funil() {
   const insets = useSafeAreaInsets();
-  const [deals, setDeals] = useState<Negocio[]>(seed);
+  const { negocios: deals, kpis, moveDeal } = useData();
   const [sheet, setSheet] = useState<Negocio | null>(null);
 
   const totalAberto = deals.filter((d) => d.etapa !== 'ganho').reduce((s, d) => s + d.valor, 0);
   const ganhoMes = deals.filter((d) => d.etapa === 'ganho').reduce((s, d) => s + d.valor, 0);
 
   const move = (id: string, etapa: EtapaId) => {
-    setDeals((list) => list.map((d) => (d.id === id ? { ...d, etapa, dias: 0 } : d)));
+    moveDeal(id, etapa);
     setSheet(null);
   };
 

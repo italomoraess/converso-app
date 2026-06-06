@@ -8,8 +8,9 @@ import { Icon } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVButton, Field, Avatar } from '@/components/ui';
 import { colors, radii, alpha } from '@/theme/tokens';
-import { servicos, catColor, catIcon, clientes, STATUS_META } from '@/lib/data';
+import { catColor, catIcon, STATUS_META } from '@/lib/data';
 import type { Servico, ServiceStatus } from '@/lib/data';
+import { useData } from '@/lib/store';
 
 const blank: Servico = {
   id: '',
@@ -25,20 +26,30 @@ const blank: Servico = {
 export default function ServicoForm() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id?: string }>();
+  const { servicos, clientes, saveService, deleteService } = useData();
   const editing = id ? servicos.find((s) => s.id === id) : undefined;
 
-  const [f, setF] = useState<Servico>(editing ?? blank);
+  const [f, setF] = useState<Servico>(editing ?? { ...blank, cliente: clientes[0]?.id ?? '' });
   const [precoTxt, setPrecoTxt] = useState(editing ? String(editing.preco) : '');
+  const [busy, setBusy] = useState(false);
   const set = <K extends keyof Servico>(k: K) => (v: Servico[K]) => setF((s) => ({ ...s, [k]: v }));
 
   const cats = Object.keys(catColor);
   const durs = ['30min', '1h', '1h30', '2h', '3h', '4h', 'Dia'];
 
-  const onSave = () => {
-    // In a real app this would call lib/api; here we just close.
+  const onSave = async () => {
+    setBusy(true);
+    try {
+      await saveService(f);
+      router.back();
+    } catch {
+      setBusy(false);
+    }
+  };
+  const onDelete = async () => {
+    if (editing) await deleteService(editing.id).catch(() => {});
     router.back();
   };
-  const onDelete = () => router.back();
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}>
@@ -200,7 +211,7 @@ export default function ServicoForm() {
           Cancelar
         </CVButton>
         <CVButton size="lg" full icon="check" onPress={onSave}>
-          {editing ? 'Salvar alterações' : 'Criar serviço'}
+          {busy ? 'Salvando…' : editing ? 'Salvar alterações' : 'Criar serviço'}
         </CVButton>
       </View>
     </View>

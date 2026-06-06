@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MobileTop } from '@/components/MobileTop';
 import { CVButton, Field } from '@/components/ui';
 import { colors, radii } from '@/theme/tokens';
+import { authService } from '@/lib/services';
+import { useData, USE_MOCK } from '@/lib/store';
 
 const ATIVIDADES = [
   'Beleza & Estética',
@@ -19,11 +21,40 @@ const ATIVIDADES = [
 
 export default function Register() {
   const insets = useSafeAreaInsets();
+  const { reload } = useData();
   const [step, setStep] = useState(0);
   const [f, setF] = useState({ nome: '', email: '', fone: '', senha: '', atividade: '' });
   const set = (k: keyof typeof f) => (v: string) => setF((s) => ({ ...s, [k]: v }));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  const onAuth = () => router.replace('/(tabs)/dashboard');
+  const onAuth = async () => {
+    setErr(null);
+    if (USE_MOCK) {
+      router.replace('/(tabs)/dashboard');
+      return;
+    }
+    if (!f.nome || !f.email || !f.senha) {
+      setErr('Preencha nome, e-mail e senha.');
+      setStep(0);
+      return;
+    }
+    if (f.senha.length < 8 || !/(?=.*[A-Z])(?=.*\d)/.test(f.senha)) {
+      setErr('Senha: mínimo 8 caracteres, com 1 maiúscula e 1 número.');
+      setStep(0);
+      return;
+    }
+    setBusy(true);
+    try {
+      await authService.register({ name: f.nome.trim(), email: f.email.trim(), password: f.senha, phone: f.fone || undefined });
+      await reload();
+      router.replace('/(tabs)/dashboard');
+    } catch {
+      setErr('Não foi possível criar a conta. O e-mail pode já estar em uso.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -95,13 +126,14 @@ export default function Register() {
       )}
 
       <View style={{ marginTop: 'auto', paddingTop: 24, paddingHorizontal: 24 }}>
+        {err && <Text style={{ color: colors.danger, fontSize: 13.5, fontWeight: '600', marginBottom: 12 }}>{err}</Text>}
         <CVButton
           size="lg"
           full
           icon={step === 0 ? 'arrowR' : 'check'}
           onPress={() => (step === 0 ? setStep(1) : onAuth())}
         >
-          {step === 0 ? 'Continuar' : 'Criar conta e começar'}
+          {step === 0 ? 'Continuar' : busy ? 'Criando…' : 'Criar conta e começar'}
         </CVButton>
         <Text style={{ textAlign: 'center', color: colors.textSubtle, fontSize: 12.5, marginTop: 14, lineHeight: 19 }}>
           Ao criar conta você aceita os{' '}

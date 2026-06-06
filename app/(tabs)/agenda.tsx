@@ -7,16 +7,20 @@ import { Icon } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVCard, CVButton, Badge, Avatar, EmptyState } from '@/components/ui';
 import { colors, radii, alpha } from '@/theme/tokens';
-import { agenda as seed, diasSemana, catColor, clienteById, clientes } from '@/lib/data';
+import { diasSemana, catColor, meses } from '@/lib/data';
 import type { Evento } from '@/lib/data';
+import { useData } from '@/lib/store';
 
-const YEAR = 2026;
-const MONTH = 5; // junho (0-indexed)
+const NOW = new Date();
+const YEAR = NOW.getFullYear();
+const MONTH = NOW.getMonth(); // 0-indexed
+const TODAY = NOW.getDate();
+const MONTH_LABEL = meses[MONTH];
 
 export default function Agenda() {
   const insets = useSafeAreaInsets();
-  const [events, setEvents] = useState<Evento[]>(seed);
-  const [sel, setSel] = useState(4);
+  const { agenda: events, addEvent, clienteById } = useData();
+  const [sel, setSel] = useState(TODAY);
   const [novo, setNovo] = useState(false);
 
   const first = new Date(YEAR, MONTH, 1).getDay();
@@ -30,8 +34,8 @@ export default function Agenda() {
     .sort((a, b) => a.hora.localeCompare(b.hora));
   const dotsFor = (d: number) => events.filter((a) => a.dia === d);
 
-  const addEvent = (ev: Omit<Evento, 'id'>) => {
-    setEvents((list) => [...list, { ...ev, id: 'a' + Date.now() }]);
+  const onSaveEvent = async (ev: Omit<Evento, 'id'>) => {
+    await addEvent(ev);
     setNovo(false);
   };
 
@@ -39,7 +43,7 @@ export default function Agenda() {
     <View style={{ flex: 1, backgroundColor: colors.bg, paddingTop: insets.top }}>
       <MobileTop
         title="Agenda"
-        sub="Junho de 2026"
+        sub={`${MONTH_LABEL} de ${YEAR}`}
         right={
           <Pressable
             onPress={() => setNovo(true)}
@@ -68,7 +72,7 @@ export default function Agenda() {
               <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name="chevL" size={18} color={colors.textMuted} />
               </View>
-              <Text style={{ fontWeight: '800', fontSize: 16, color: colors.text }}>Junho 2026</Text>
+              <Text style={{ fontWeight: '800', fontSize: 16, color: colors.text }}>{MONTH_LABEL} {YEAR}</Text>
               <View style={{ width: 34, height: 34, borderRadius: 10, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
                 <Icon name="chevR" size={18} color={colors.textMuted} />
               </View>
@@ -85,7 +89,7 @@ export default function Agenda() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {cells.map((d, i) => {
                 if (!d) return <View key={i} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />;
-                const isToday = d === 4;
+                const isToday = d === TODAY;
                 const isSel = d === sel;
                 const evs = dotsFor(d);
                 return (
@@ -135,7 +139,7 @@ export default function Agenda() {
         <View style={{ paddingHorizontal: 20, paddingTop: 18 }}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
             <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>
-              {sel === 4 ? 'Hoje' : `${sel} de junho`}
+              {sel === TODAY ? 'Hoje' : `${sel} de ${MONTH_LABEL.toLowerCase()}`}
             </Text>
             <Text style={{ fontSize: 13, color: colors.textSubtle, fontWeight: '600' }}>
               {eventosDoDia.length} {eventosDoDia.length === 1 ? 'compromisso' : 'compromissos'}
@@ -180,7 +184,7 @@ export default function Agenda() {
         </View>
       </ScrollView>
 
-      {novo && <NovoAgendamentoSheet onClose={() => setNovo(false)} defaultDay={sel} onSave={addEvent} />}
+      {novo && <NovoAgendamentoSheet onClose={() => setNovo(false)} defaultDay={sel} onSave={onSaveEvent} />}
     </View>
   );
 }
@@ -195,7 +199,8 @@ function NovoAgendamentoSheet({
   defaultDay: number;
 }) {
   const insets = useSafeAreaInsets();
-  const [cliente, setCliente] = useState('c1');
+  const { clientes, clienteById } = useData();
+  const [cliente, setCliente] = useState(clientes[0]?.id ?? '');
   const [tipo, setTipo] = useState('Consultoria');
   const [hora, setHora] = useState('10:00');
   const horas = ['08:00', '09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00'];
@@ -263,7 +268,7 @@ function NovoAgendamentoSheet({
 
             <View>
               <Text style={{ fontSize: 13.5, fontWeight: '700', color: colors.textMuted, marginBottom: 8 }}>
-                Horário · {defaultDay} de junho
+                Horário · {defaultDay} de {MONTH_LABEL.toLowerCase()}
               </Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {horas.map((h) => (
@@ -296,7 +301,7 @@ function NovoAgendamentoSheet({
                   titulo: `${tipo} — ${clienteById(cliente).nome.split(' ')[0]}`,
                   dur: 60,
                   status: 'confirmado',
-                })
+                } as Omit<Evento, 'id'>)
               }
             >
               Confirmar agendamento
