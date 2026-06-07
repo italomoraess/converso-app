@@ -60,7 +60,11 @@ interface DataCtx {
   deleteService: (id: string) => Promise<void>;
   moveDeal: (id: string, etapa: EtapaId) => void;
   addEvent: (ev: Omit<Evento, 'id'>) => Promise<void>;
+  updateProfile: (p: { nome?: string; fone?: string; cidade?: string }) => Promise<void>;
 }
+
+const initials = (s: string) =>
+  s.split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?';
 
 const Ctx = createContext<DataCtx | null>(null);
 
@@ -94,8 +98,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
           nome: profile.name ?? profile.email,
           papel: 'Autônomo',
           email: profile.email,
-          ini: (profile.name ?? profile.email).split(' ').map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase() || '?',
-          cidade: '',
+          ini: initials(profile.name ?? profile.email),
+          fone: profile.phone ?? '',
+          cidade: profile.city ?? '',
           plano: profile.plan ?? 'Profissional',
         });
       }
@@ -155,12 +160,35 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setAgenda((l) => [...l, saved]);
   }, []);
 
+  const updateProfile = useCallback(
+    async (p: { nome?: string; fone?: string; cidade?: string }) => {
+      if (USE_MOCK) {
+        setUser((u) => ({
+          ...u,
+          ...(p.nome !== undefined ? { nome: p.nome, ini: initials(p.nome) } : {}),
+          ...(p.fone !== undefined ? { fone: p.fone } : {}),
+          ...(p.cidade !== undefined ? { cidade: p.cidade } : {}),
+        }));
+        return;
+      }
+      const saved = await authService.updateProfile({ name: p.nome, phone: p.fone, city: p.cidade });
+      setUser((u) => ({
+        ...u,
+        nome: saved.name ?? u.nome,
+        ini: initials(saved.name ?? u.nome),
+        fone: saved.phone ?? '',
+        cidade: saved.city ?? '',
+      }));
+    },
+    [],
+  );
+
   const value = useMemo<DataCtx>(
     () => ({
       loading, hasAccess, clientes, servicos, negocios, agenda, kpis, sparkReceita, receitaMeses, user,
-      clienteById, reload, saveService, deleteService, moveDeal, addEvent,
+      clienteById, reload, saveService, deleteService, moveDeal, addEvent, updateProfile,
     }),
-    [loading, hasAccess, clientes, servicos, negocios, agenda, kpis, sparkReceita, receitaMeses, user, clienteById, reload, saveService, deleteService, moveDeal, addEvent],
+    [loading, hasAccess, clientes, servicos, negocios, agenda, kpis, sparkReceita, receitaMeses, user, clienteById, reload, saveService, deleteService, moveDeal, addEvent, updateProfile],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -18,6 +18,8 @@ export interface UserProfile {
   id: string;
   email: string;
   name?: string | null;
+  phone?: string | null;
+  city?: string | null;
   plan?: string;
   role?: string;
   /** false quando o trial acabou e não há assinatura ativa. */
@@ -42,6 +44,10 @@ export const authService = {
   },
   async me(): Promise<UserProfile> {
     const { data } = await api.get<UserProfile>('/auth/me');
+    return data;
+  },
+  async updateProfile(body: { name?: string; phone?: string; city?: string }): Promise<UserProfile> {
+    const { data } = await api.patch<UserProfile>('/auth/me', body);
     return data;
   },
 };

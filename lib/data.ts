@@ -72,6 +72,7 @@ export type Usuario = {
   papel: string;
   email: string;
   ini: string;
+  fone: string;
   cidade: string;
   plano: string;
 };
@@ -164,6 +165,7 @@ export const user: Usuario = {
   papel: 'Designer & Consultora',
   email: 'julia.mendes@converso.app',
   ini: 'JM',
+  fone: '(11) 98765-4321',
   cidade: 'São Paulo, SP',
   plano: 'Profissional',
 };
