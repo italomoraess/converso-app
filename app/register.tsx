@@ -7,7 +7,7 @@ import { MobileTop } from '@/components/MobileTop';
 import { CVButton, Field } from '@/components/ui';
 import { colors, radii } from '@/theme/tokens';
 import { authService } from '@/lib/services';
-import { useData, USE_MOCK } from '@/lib/store';
+import { useData } from '@/lib/store';
 
 const ATIVIDADES = [
   'Beleza & Estética',
@@ -30,10 +30,6 @@ export default function Register() {
 
   const onAuth = async () => {
     setErr(null);
-    if (USE_MOCK) {
-      router.replace('/(tabs)/dashboard');
-      return;
-    }
     if (!f.nome || !f.email || !f.senha) {
       setErr('Preencha nome, e-mail e senha.');
       setStep(0);

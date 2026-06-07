@@ -10,14 +10,6 @@ import React, {
   type ReactNode,
 } from 'react';
 import {
-  clientes as mockClientes,
-  servicos as mockServicos,
-  negocios as mockNegocios,
-  agenda as mockAgenda,
-  kpis as mockKpis,
-  sparkReceita as mockSpark,
-  receitaMeses as mockMeses,
-  user as mockUser,
   type Cliente,
   type Servico,
   type Negocio,
@@ -36,12 +28,12 @@ import {
 } from './services';
 import { leadToCliente, leadToNegocio } from './mappers';
 
-export const USE_MOCK = process.env.EXPO_PUBLIC_USE_MOCK === 'true';
-
 const EMPTY_KPIS: DashboardKpis = {
   receitaMes: 0, receitaMeta: 5000, receitaDelta: 0, aReceber: 0,
   servicosAtivos: 0, negociosAbertos: 0, taxaConversao: 0, novosClientes: 0, agendaHoje: 0,
 };
+
+const EMPTY_USER: Usuario = { nome: '', papel: '', email: '', ini: '', fone: '', cidade: '', plano: '' };
 
 interface DataCtx {
   loading: boolean;
@@ -69,19 +61,18 @@ const initials = (s: string) =>
 const Ctx = createContext<DataCtx | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(!USE_MOCK);
+  const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState(true);
-  const [clientes, setClientes] = useState<Cliente[]>(USE_MOCK ? mockClientes : []);
-  const [servicos, setServicos] = useState<Servico[]>(USE_MOCK ? mockServicos : []);
-  const [negocios, setNegocios] = useState<Negocio[]>(USE_MOCK ? mockNegocios : []);
-  const [agenda, setAgenda] = useState<Evento[]>(USE_MOCK ? mockAgenda : []);
-  const [kpis, setKpis] = useState<DashboardKpis>(USE_MOCK ? (mockKpis as DashboardKpis) : EMPTY_KPIS);
-  const [sparkReceita, setSpark] = useState<number[]>(USE_MOCK ? mockSpark : []);
-  const [receitaMeses, setMeses] = useState<{ m: string; v: number }[]>(USE_MOCK ? mockMeses : []);
-  const [user, setUser] = useState<Usuario>(mockUser);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [servicos, setServicos] = useState<Servico[]>([]);
+  const [negocios, setNegocios] = useState<Negocio[]>([]);
+  const [agenda, setAgenda] = useState<Evento[]>([]);
+  const [kpis, setKpis] = useState<DashboardKpis>(EMPTY_KPIS);
+  const [sparkReceita, setSpark] = useState<number[]>([]);
+  const [receitaMeses, setMeses] = useState<{ m: string; v: number }[]>([]);
+  const [user, setUser] = useState<Usuario>(EMPTY_USER);
 
   const reload = useCallback(async () => {
-    if (USE_MOCK) return;
     if (!(await getToken())) {
       setLoading(false);
       return;
@@ -133,10 +124,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const saveService = useCallback(
     async (f: Servico) => {
       const isEdit = !!f.id && servicos.some((s) => s.id === f.id);
-      if (USE_MOCK) {
-        setServicos((l) => (isEdit ? l.map((s) => (s.id === f.id ? f : s)) : [{ ...f, id: 's' + Date.now() }, ...l]));
-        return;
-      }
       const saved = isEdit ? await catalogService.update(f.id, f) : await catalogService.create(f);
       setServicos((l) => (isEdit ? l.map((s) => (s.id === saved.id ? saved : s)) : [saved, ...l]));
     },
@@ -144,20 +131,16 @@ export function DataProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteService = useCallback(async (id: string) => {
-    if (!USE_MOCK) await catalogService.remove(id);
+    await catalogService.remove(id);
     setServicos((l) => l.filter((s) => s.id !== id));
   }, []);
 
   const moveDeal = useCallback((id: string, etapa: EtapaId) => {
     setNegocios((l) => l.map((d) => (d.id === id ? { ...d, etapa, dias: 0 } : d)));
-    if (!USE_MOCK) leadsService.moveStage(id, etapa).catch(() => {});
+    leadsService.moveStage(id, etapa).catch(() => {});
   }, []);
 
   const addEvent = useCallback(async (ev: Omit<Evento, 'id'>) => {
-    if (USE_MOCK) {
-      setAgenda((l) => [...l, { ...ev, id: 'a' + Date.now() }]);
-      return;
-    }
     const now = new Date();
     const saved = await agendaService.create(ev, now.getFullYear(), now.getMonth());
     setAgenda((l) => [...l, saved]);
@@ -165,15 +148,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateProfile = useCallback(
     async (p: { nome?: string; fone?: string; cidade?: string }) => {
-      if (USE_MOCK) {
-        setUser((u) => ({
-          ...u,
-          ...(p.nome !== undefined ? { nome: p.nome, ini: initials(p.nome) } : {}),
-          ...(p.fone !== undefined ? { fone: p.fone } : {}),
-          ...(p.cidade !== undefined ? { cidade: p.cidade } : {}),
-        }));
-        return;
-      }
       const saved = await authService.updateProfile({ name: p.nome, phone: p.fone, city: p.cidade });
       setUser((u) => ({
         ...u,

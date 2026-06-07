@@ -7,7 +7,7 @@ import { Icon } from '@/components/Icon';
 import { CVButton, Field, LogoMark } from '@/components/ui';
 import { colors } from '@/theme/tokens';
 import { authService } from '@/lib/services';
-import { useData, USE_MOCK } from '@/lib/store';
+import { useData } from '@/lib/store';
 
 export default function Login() {
   const insets = useSafeAreaInsets();
@@ -20,10 +20,6 @@ export default function Login() {
 
   const onAuth = async () => {
     setErr(null);
-    if (USE_MOCK) {
-      router.replace('/(tabs)/dashboard');
-      return;
-    }
     if (!email || !senha) {
       setErr('Informe e-mail e senha.');
       return;
