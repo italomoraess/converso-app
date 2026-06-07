@@ -7,15 +7,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVCard, Badge, Field, EmptyState } from '@/components/ui';
+import { ServicosSkeleton } from '@/components/Skeletons';
 import { colors, alpha } from '@/theme/tokens';
 import { catColor, catIcon, fmtBRL, STATUS_META } from '@/lib/data';
 import { useData } from '@/lib/store';
 
 export default function Servicos() {
   const insets = useSafeAreaInsets();
-  const { servicos: seed, clienteById } = useData();
+  const { servicos: seed, clienteById, loading } = useData();
   const [q, setQ] = useState('');
   const [cat, setCat] = useState('Todos');
+  if (loading) return <ServicosSkeleton top={insets.top} />;
   const list = seed.filter(
     (s) => (cat === 'Todos' || s.cat === cat) && s.nome.toLowerCase().includes(q.toLowerCase()),
   );

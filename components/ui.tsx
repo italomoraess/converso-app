@@ -1,6 +1,6 @@
 /* CONVERSO Mobile — RN UI primitives. Mirrors mobile/ui.jsx.
    CVButton, CVCard, Avatar, Badge, Field, SectionHead, Wordmark, LogoMark, StatPill. */
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,9 @@ import {
   ViewStyle,
   TextStyle,
   StyleProp,
+  Animated,
+  Easing,
+  DimensionValue,
 } from 'react-native';
 import Svg, { Defs, LinearGradient, Stop, Path } from 'react-native-svg';
 import { Icon, IconName } from './Icon';
@@ -83,6 +86,40 @@ export function CVButton({
         {children}
       </Text>
     </Pressable>
+  );
+}
+
+/* ----------------------------- Skeleton ----------------------------- */
+
+export function Skeleton({
+  w = '100%',
+  h = 14,
+  r = 8,
+  style,
+}: {
+  w?: DimensionValue;
+  h?: DimensionValue;
+  r?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const op = useRef(new Animated.Value(0.5)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(op, { toValue: 1, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(op, { toValue: 0.5, duration: 750, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [op]);
+  return (
+    <Animated.View
+      style={[
+        { width: w, height: h, borderRadius: r, backgroundColor: mix(colors.text, 9, colors.surface), opacity: op },
+        style,
+      ]}
+    />
   );
 }
 

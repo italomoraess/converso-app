@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVCard, CVButton, Badge, Avatar, EmptyState } from '@/components/ui';
+import { AgendaSkeleton } from '@/components/Skeletons';
 import { colors, radii, alpha } from '@/theme/tokens';
 import { diasSemana, catColor, meses } from '@/lib/data';
 import type { Evento } from '@/lib/data';
@@ -19,9 +20,11 @@ const MONTH_LABEL = meses[MONTH];
 
 export default function Agenda() {
   const insets = useSafeAreaInsets();
-  const { agenda: events, addEvent, clienteById } = useData();
+  const { agenda: events, addEvent, clienteById, loading } = useData();
   const [sel, setSel] = useState(TODAY);
   const [novo, setNovo] = useState(false);
+
+  if (loading) return <AgendaSkeleton top={insets.top} />;
 
   const first = new Date(YEAR, MONTH, 1).getDay();
   const days = new Date(YEAR, MONTH + 1, 0).getDate();

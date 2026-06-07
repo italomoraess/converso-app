@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '@/components/Icon';
 import { MobileTop } from '@/components/MobileTop';
 import { CVCard, Badge, Avatar } from '@/components/ui';
+import { FunilSkeleton } from '@/components/Skeletons';
 import { colors, radii, alpha } from '@/theme/tokens';
 import { etapas, fmtBRL } from '@/lib/data';
 import type { EtapaId, Negocio } from '@/lib/data';
@@ -42,8 +43,9 @@ function DealCard({ deal, stageColor, onMove }: { deal: Negocio; stageColor: str
 
 export default function Funil() {
   const insets = useSafeAreaInsets();
-  const { negocios: deals, kpis, moveDeal } = useData();
+  const { negocios: deals, kpis, moveDeal, loading } = useData();
   const [sheet, setSheet] = useState<Negocio | null>(null);
+  if (loading) return <FunilSkeleton top={insets.top} />;
 
   const totalAberto = deals.filter((d) => d.etapa !== 'ganho').reduce((s, d) => s + d.valor, 0);
   const ganhoMes = deals.filter((d) => d.etapa === 'ganho').reduce((s, d) => s + d.valor, 0);

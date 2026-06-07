@@ -69,7 +69,7 @@ const initials = (s: string) =>
 const Ctx = createContext<DataCtx | null>(null);
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(!USE_MOCK);
   const [hasAccess, setHasAccess] = useState(true);
   const [clientes, setClientes] = useState<Cliente[]>(USE_MOCK ? mockClientes : []);
   const [servicos, setServicos] = useState<Servico[]>(USE_MOCK ? mockServicos : []);
@@ -82,7 +82,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const reload = useCallback(async () => {
     if (USE_MOCK) return;
-    if (!(await getToken())) return;
+    if (!(await getToken())) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [profile, leads, svc, ag, dash] = await Promise.all([

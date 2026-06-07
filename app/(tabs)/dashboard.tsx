@@ -8,6 +8,7 @@ import { MobileTop } from '@/components/MobileTop';
 import { Sparkline } from '@/components/Sparkline';
 import { CVCard, Badge, SectionHead, StatPill } from '@/components/ui';
 import { InactiveNotice } from '@/components/InactiveNotice';
+import { DashboardSkeleton } from '@/components/Skeletons';
 import { colors, radii, alpha, mix } from '@/theme/tokens';
 import { etapas, catColor, fmtBRL, meses } from '@/lib/data';
 import { useData } from '@/lib/store';
@@ -85,7 +86,8 @@ function ShortcutBtn({
 
 export default function Dashboard() {
   const insets = useSafeAreaInsets();
-  const { kpis: k, agenda, user, sparkReceita, clienteById } = useData();
+  const { kpis: k, agenda, user, sparkReceita, clienteById, loading } = useData();
+  if (loading) return <DashboardSkeleton top={insets.top} />;
   const pct = k.receitaMeta ? Math.round((k.receitaMes / k.receitaMeta) * 100) : 0;
   const now = new Date();
   const hoje = agenda.filter((a) => a.dia === now.getDate());
